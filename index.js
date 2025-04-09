@@ -39,17 +39,24 @@ app.post('/api/employees', async (req, res) => {
             techStack, 
             githubUsername, 
             linkedinProfile, 
-            image 
+            image,
+            age 
         } = req.body;
 
         // Validate required fields
-        if (!email || !name || !surname || !phone || !idNumber || !role || !department || !techStack) {
+        if (!email || !name || !surname || !phone || !idNumber || !role || !department || !techStack || !age) {
             return res.status(400).send('Missing required fields');
         }
 
         // Validate email format
         if (typeof email !== 'string' || email.trim() === '') {
             return res.status(400).send('Invalid email');
+        }
+
+        // Validate age
+        const ageNum = parseInt(age);
+        if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) {
+            return res.status(400).send('Age must be a number between 18 and 100');
         }
 
         // Check if employee with this ID already exists
@@ -70,9 +77,10 @@ app.post('/api/employees', async (req, res) => {
             githubUsername: githubUsername || '',
             linkedinProfile: linkedinProfile || '',
             image: image || '', 
+            age: ageNum,
             createdAt: admin.firestore.FieldValue.serverTimestamp(), 
         };
-
+        
         // Use idNumber as the document ID for consistency
         const employeeRef = db.collection('employees').doc(idNumber);  
         await employeeRef.set(employeeData);
@@ -142,8 +150,9 @@ app.put('/api/employees/:idNumber', async (req, res) => {
       techStack, 
       githubUsername, 
       linkedinProfile, 
-      image 
-  } = req.body;
+      image,
+      age
+    } = req.body;
     
     try {
       // Check if employee exists
@@ -153,6 +162,33 @@ app.put('/api/employees/:idNumber', async (req, res) => {
       if (!doc.exists) {
         return res.status(404).json({ message: 'Employee not found' });
       }
+      
+      // Validate required fields
+      if (!email || !name || !surname || !phone || !role || !department || !techStack || !age) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      // Validate age
+      const ageNum = parseInt(age);
+      if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) {
+        return res.status(400).json({ message: 'Age must be a number between 18 and 100' });
+      }
+      
+      // Prepare updated data
+      const updatedData = {
+        name,
+        surname,
+        email,
+        phone,
+        role,
+        department,
+        techStack,
+        githubUsername: githubUsername || '',
+        linkedinProfile: linkedinProfile || '',
+        image: image || doc.data().image || '',
+        age: ageNum,
+        updatedAt: admin.firestore.FieldValue.serverTimestamp()
+      };
       
       // Update the employee
       await employeeRef.update(updatedData);
@@ -208,4 +244,4 @@ app.get('/api/employees/:idNumber', async (req, res) => {
 
 app.listen(3001, () => {
   console.log('Server is running on port 3001');
-});
+}); 
